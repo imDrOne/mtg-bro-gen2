@@ -1,0 +1,42 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - revive
+    - bodyclose
+    - noctx
+    - contextcheck
+    - sqlclosecheck
+    - gosec
+    - testifylint
+    - errorlint
+    - copyloopvar
+    - unconvert
+  settings:
+    revive:
+      severity: warning
+    gosec:
+      excludes:
+        - G104
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - mtg-bto-gen2
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

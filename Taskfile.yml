@@ -12,19 +12,39 @@ tasks:
       - go build ./...
 
   test:
-    desc: Run tests
+    desc: Run unit tests
     cmds:
       - go test ./...
+
+  test:integration:
+    desc: Run integration tests (testcontainers, requires Docker)
+    cmds:
+      - go test -tags=integration ./...
 
   vet:
     desc: Vet code
     cmds:
       - go vet ./...
 
+  lint:
+    desc: Run linter
+    cmds:
+      - go tool golangci-lint run ./...
+
+  lint:fix:
+    desc: Run linter and auto-fix issues
+    cmds:
+      - go tool golangci-lint run --fix ./...
+
+  generate:
+    desc: Run go generate (mocks, etc)
+    cmds:
+      - go generate ./...
+
   up:
     desc: Start local docker-compose stack
     cmds:
-      - docker compose -f docker-compose.local.yml up -d
+      - docker compose -f docker-compose.local.yml up -d -p mtg-bro-gen2
 
   down:
     desc: Stop local docker-compose stack
