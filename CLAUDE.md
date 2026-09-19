@@ -71,6 +71,10 @@ Both are empty scaffolds until services exist.
 
 Fall back to `grep`/`Grep` tool only if the MCP server is unavailable.
 
+## Worktrees
+
+Don't create git worktrees nested inside this repo (e.g. `.claude/worktrees/`). Create them one level up, as a sibling directory of the repo root instead. Reason: GoLand (and other IDEs) index/watch the whole repo tree — a nested worktree duplicates the monorepo's content inside itself, and as the monorepo grows (multiple services + libs) that duplication is enough to make the IDE hang.
+
 ## Ignoring files
 
 `.gitignore` covers standard Go build/test artifacts plus any `*.local*` / `.local/` paths for local-only overrides — use that convention for machine-specific config instead of `.env`-only patterns.
