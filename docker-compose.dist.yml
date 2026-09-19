@@ -1,0 +1,5 @@
+version: '3.9'
+
+# Template for local dev stack. Copy to docker-compose.local.yml (gitignored)
+# and adjust per-machine — services added here as microservices land.
+services: {}

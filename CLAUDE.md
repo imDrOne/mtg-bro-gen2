@@ -50,10 +50,11 @@ These libs are pinned in `go.mod` ahead of any consumer code, so they currently 
 
 ## Docker
 
-- `docker-compose.local.yml` — local dev stack
-- `docker-compose.prod.yml` — prod stack
+- `docker-compose.dist.yml` — tracked template for the local dev stack; copy to `docker-compose.local.yml` (gitignored, machine-specific) and adjust
+- `docker-compose.local.yml` — your local dev stack, gitignored
+- `docker-compose.prod.yml` — prod stack, tracked
 
-Both are empty scaffolds until services exist.
+All are empty scaffolds until services exist.
 
 ## Go style
 

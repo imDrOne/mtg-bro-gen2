@@ -22,6 +22,7 @@ coverage.html
 .local
 .local.*
 .local/
+docker-compose.local.yml
 
 # Editor / IDE
 .idea/
