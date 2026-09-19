@@ -1,0 +1,4 @@
+version: '3.9'
+
+# Prod stack. Services added here as microservices land.
+services: {}

@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  run:
+    desc: Run main package
+    cmds:
+      - go run main.go
+
+  build:
+    desc: Build all modules
+    cmds:
+      - go build ./...
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  vet:
+    desc: Vet code
+    cmds:
+      - go vet ./...
+
+  up:
+    desc: Start local docker-compose stack
+    cmds:
+      - docker compose -f docker-compose.local.yml up -d
+
+  down:
+    desc: Stop local docker-compose stack
+    cmds:
+      - docker compose -f docker-compose.local.yml down

@@ -1,0 +1,32 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+vendor/
+
+# Go build/test cache & coverage
+*.cover
+coverage.txt
+coverage.html
+
+# Env / local overrides
+.env
+.env.*
+.local
+.local.*
+*.local.*
+.local/
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# MCP / Agents
+.mcp.json
+.serena/
