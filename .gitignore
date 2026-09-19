@@ -9,6 +9,7 @@
 /bin/
 /dist/
 vendor/
+/mtg-bto-gen2
 
 # Go build/test cache & coverage
 *.cover
@@ -20,7 +21,6 @@ coverage.html
 .env.*
 .local
 .local.*
-*.local.*
 .local/
 
 # Editor / IDE
