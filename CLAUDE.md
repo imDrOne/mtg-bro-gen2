@@ -24,6 +24,13 @@ libs/<name>/         # shared libraries, each its own go.mod
 docs/arch/           # cross-service architecture docs + ADRs
 ```
 
+**Before starting work on a milestone or service, check open GitHub issues**
+(`gh issue list --milestone "<name>"` or `gh issue list`) — they are the
+live task breakdown (one issue per roadmap milestone M0–M7, checkboxes
+inside), not just `docs/arch/roadmap.md`. Tick off checkboxes / close the
+issue as work lands; if the checklist has drifted from what actually needs
+doing, edit the issue rather than silently ignoring it.
+
 Current service registry (owner, DB schema, Kafka topics, status): [docs/arch/services.md](docs/arch/services.md).
 **When adding, renaming, or removing a service, update that registry first** —
 `docs/arch/overview.md` and `docs/arch/roadmap.md` follow it, not the other
