@@ -2,17 +2,86 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
+## Project
 
-Skeleton Go module (`mtg-bto-gen2`, Go 1.27). Only `main.go` exists (prints "Hello world" via `log/slog`). No packages, tests, or microservices yet — architecture notes will be expanded here once the project idea is fixed.
+MTG-Bro: a platform for building Magic: The Gathering decks — deck building
+with business-rule validation, combo/insight recommendations, community
+article insights, and AI-agent deck assembly via an MCP server that plugs
+into Claude, ChatGPT, etc. Full system architecture, service registry, and
+implementation roadmap live in [docs/arch/](docs/arch/README.md) — read
+`docs/arch/README.md` first when working on anything cross-service.
 
 ## Repo shape
 
-Monorepo for MTG-Bro: multiple Go microservices plus shared internal libraries (HTTP clients for external sources, pagination helpers, etc). Expect a structure like `services/<name>` for deployable services and `libs/<name>` (or `pkg/`) for shared code, added as they land — nothing exists yet beyond the module root.
+Monorepo, **multi-module** ([ADR-0001](docs/arch/adr/0001-multi-module-go-workspace.md)):
+every service and shared library is its own Go module, tied together by a
+root `go.work` for local development.
+
+```
+go.work
+services/<name>/     # deployable services, each its own go.mod + CLAUDE.md
+libs/<name>/         # shared libraries, each its own go.mod
+docs/arch/           # cross-service architecture docs + ADRs
+```
+
+Current service registry (owner, DB schema, Kafka topics, status): [docs/arch/services.md](docs/arch/services.md).
+**When adding, renaming, or removing a service, update that registry first** —
+`docs/arch/overview.md` and `docs/arch/roadmap.md` follow it, not the other
+way around. Each service gets its own `CLAUDE.md` under `services/<name>/`
+with service-specific business logic, contracts, and invariants; this file
+stays about the repo as a whole.
 
 - Origin: https://github.com/imDrOne/mtg-bro-gen2
 - Default branch: `master`
 - `gh` CLI is authenticated and usable for issues/PRs/repo ops.
+
+## Go modules and workspace
+
+- `go.work` lists every `services/*` and `libs/*` module — run `go build`,
+  `go test`, `go vet` from the repo root and they resolve across the whole
+  workspace without `replace` directives.
+- `libs/*` are versioned independently via git tags, e.g. `libs/scryfall/v0.1.0`.
+  Services pin a specific version in their `go.mod`, not "whatever's on disk" —
+  bumping a shared library requires an explicit version bump in each consumer.
+- The root `go.mod` (tool dependencies: golangci-lint, mockgen) is repo
+  tooling, not a library or service module — leave it as is.
+
+## Transport conventions ([ADR-0002](docs/arch/adr/0002-grpc-internal-rest-external.md))
+
+- **Service-to-service: gRPC.** Contracts live in `libs/proto`, generated via
+  `buf`. Breaking changes get a new `v2` package alongside the old one.
+- **Public-facing: REST + OpenAPI.** Each service with an external surface
+  ships `api/openapi.yaml`.
+- **mcp-gateway** speaks MCP to its clients — neither REST nor gRPC on that side.
+
+Full contract rules (error format, gRPC-code-to-HTTP mapping, deadline
+propagation, identity-in-metadata) — [docs/arch/api-contracts.md](docs/arch/api-contracts.md).
+
+## Database conventions
+
+- **One Postgres instance, one schema per service** — no service reads
+  another service's schema directly; cross-service data access goes through
+  gRPC. See [docs/arch/persistence.md](docs/arch/persistence.md).
+- **sqlc for static queries, pgx (`pgxpool`) by hand for dynamic ones**
+  (search filters, hybrid vector+text queries) — [ADR-0004](docs/arch/adr/0004-sqlc-plus-pgx.md).
+  sqlc reads its schema straight from each service's `migrations/` directory;
+  there is no separate copy of the DDL to keep in sync.
+- **Migrations run as a separate sidecar mini-app, never on service startup.**
+  Every service ships `cmd/migrate` (up/down/version/force/seed) alongside
+  `cmd/server`, each with its own `Dockerfile`/`Dockerfile.migrate`. DB roles
+  are split: `<svc>_migrator` (DDL) vs `<svc>_app` (DML). Full pattern,
+  including the `build_migrations → run_migrations → deploy` CI contract —
+  [ADR-0003](docs/arch/adr/0003-migrations-as-sidecar-job.md) and
+  [docs/arch/persistence.md](docs/arch/persistence.md#миграционный-паттерн).
+
+## Distributed-systems patterns
+
+Patterns (rate limiting, circuit breaker, outbox, singleflight, task leasing,
+token budgets, DLQ, etc.) are adopted only where a service has a concrete
+need for them — never added just for practice. The full map, with the
+specific problem each pattern solves and what's deliberately *not* used, is
+[docs/arch/patterns.md](docs/arch/patterns.md). Check it before reaching for
+a pattern in new code.
 
 ## Task runner
 
@@ -35,14 +104,16 @@ Underlying commands (if `task` unavailable):
 - Vet: `go vet ./...`
 - Lint: `go tool golangci-lint run ./...`
 
+Taskfile targets go module-aware as `services/*`/`libs/*` land (M0) — expect
+`build`/`test`/`vet` to iterate modules rather than run a single `./...` once
+there's more than the root module.
+
 ## Testing stack
 
 - Assertions: `github.com/stretchr/testify` (`assert`/`require`)
 - Integration tests: `github.com/testcontainers/testcontainers-go`, gated behind the `integration` build tag (`//go:build integration`) so `task test` stays fast/Docker-free; run them with `task test:integration`
 - Mocks: `go.uber.org/mock` — generate with `go tool mockgen` (registered as a `tool` dependency in `go.mod`, no global install needed), wire generation through `//go:generate` directives + `task generate`
-- Architecture tests: not wired yet — no package boundaries exist to enforce. Once `services/<name>` / `libs/<name>` land, evaluate `go-arch-lint` (fe3dback) for declarative import-boundary checks between layers
-
-These libs are pinned in `go.mod` ahead of any consumer code, so they currently show as unused/indirect. Don't run a bare `go mod tidy` until the first real test imports them, or it'll drop the requires — tidy right after wiring the first usage instead.
+- Architecture boundaries: `go-arch-lint` enforces import rules between `internal/` packages and between `services/*`/`libs/*` — wired in as part of M0 once package boundaries exist.
 
 ## Linting
 
@@ -54,7 +125,8 @@ These libs are pinned in `go.mod` ahead of any consumer code, so they currently 
 - `docker-compose.local.yml` — your local dev stack, gitignored
 - `docker-compose.prod.yml` — prod stack, tracked
 
-All are empty scaffolds until services exist.
+All are empty scaffolds until services exist. Deployment topology (single
+low-spec server, no k8s, DuckDNS domains, resource budget) — [docs/arch/deployment.md](docs/arch/deployment.md).
 
 ## Go style
 
