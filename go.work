@@ -1,0 +1,11 @@
+go 1.27.1
+
+use (
+	.
+	./services/article-parser
+	./services/authenticator
+	./services/deck
+	./services/insight-provider
+	./services/limited-stats
+	./services/mcp-gateway
+)

@@ -3,5 +3,5 @@ package main
 import "log/slog"
 
 func main() {
-	slog.Info("Hello world")
+	slog.Info("hello authenticator")
 }

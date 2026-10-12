@@ -1,5 +1,54 @@
 {
   "enabledPlugins": {
-    "modern-go-guidelines@goland-claude-marketplace": true
+    "modern-go-guidelines@goland-claude-marketplace": true,
+    "superpowers@claude-plugins-official": true,
+    "plannotator@plannotator": true,
+    "gopls-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "goland-claude-marketplace": {
+      "source": { "source": "github", "repo": "JetBrains/go-modern-guidelines" }
+    },
+    "plannotator": {
+      "source": { "source": "github", "repo": "backnotprop/plannotator" }
+    }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-block-destructive-bash.sh\"" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-nudge-task.sh\"" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-block-generated.sh\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/post-gofmt.sh\"" },
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/post-lint-advisory.sh\"" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-build-gate.sh\"", "timeout": 120 },
+          {
+            "type": "agent",
+            "prompt": "You are a docs-sync gate at the end of a Claude Code turn in the mtg-bto-gen2 repo. Hook input JSON: $ARGUMENTS\n\nIf stop_hook_active is true in that JSON, allow immediately — this check already ran once this turn.\n\nOtherwise run `git status --porcelain` and `git diff` to see what changed this session. If there are no uncommitted changes, or the changes are test-only/comment-only/already docs-only, allow.\n\nOtherwise check whether the change touches anything that docs/arch/*.md, docs/arch/adr/*.md, root CLAUDE.md, or a services/*/CLAUDE.md states as fact: a new/renamed/removed service or library (docs/arch/services.md is the source of truth for the registry — check it first), a new or changed Kafka topic/event schema (docs/arch/messaging.md), a new or changed REST/gRPC endpoint or contract (docs/arch/api-contracts.md), a newly-adopted distributed-systems pattern (docs/arch/patterns.md), a changed DB schema/migration convention (docs/arch/persistence.md), or a changed Taskfile/hook/dev-workflow convention (root CLAUDE.md).\n\nIf a relevant doc is now stale, incomplete, or missing information about this change, block: name the exact file(s) that need updating and what's missing, in one or two sentences per file. If docs are already in sync, or the change isn't the kind that invalidates documentation, allow without comment.",
+            "timeout": 90
+          }
+        ]
+      }
+    ]
   }
 }
