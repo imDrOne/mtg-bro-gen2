@@ -53,48 +53,13 @@ stays about the repo as a whole.
 - The root `go.mod` (tool dependencies: golangci-lint, mockgen) is repo
   tooling, not a library or service module — leave it as is.
 
-## Transport conventions ([ADR-0002](docs/arch/adr/0002-grpc-internal-rest-external.md))
-
-- **Service-to-service: gRPC.** Contracts live in `libs/proto`, generated via
-  `buf`. Breaking changes get a new `v2` package alongside the old one.
-- **Public-facing: REST + OpenAPI.** Each service with an external surface
-  ships `api/openapi.yaml`.
-- **mcp-gateway** speaks MCP to its clients — neither REST nor gRPC on that side.
-
-Full contract rules (error format, gRPC-code-to-HTTP mapping, deadline
-propagation, identity-in-metadata) — [docs/arch/api-contracts.md](docs/arch/api-contracts.md).
-
-## Database conventions
-
-- **One Postgres instance, one schema per service** — no service reads
-  another service's schema directly; cross-service data access goes through
-  gRPC. See [docs/arch/persistence.md](docs/arch/persistence.md).
-- **sqlc for static queries, pgx (`pgxpool`) by hand for dynamic ones**
-  (search filters, hybrid vector+text queries) — [ADR-0004](docs/arch/adr/0004-sqlc-plus-pgx.md).
-  sqlc reads its schema straight from each service's `migrations/` directory;
-  there is no separate copy of the DDL to keep in sync.
-- **Migrations run as a separate sidecar mini-app, never on service startup.**
-  Every service ships `cmd/migrate` (up/down/version/force/seed) alongside
-  `cmd/server`, each with its own `Dockerfile`/`Dockerfile.migrate`. DB roles
-  are split: `<svc>_migrator` (DDL) vs `<svc>_app` (DML). Full pattern,
-  including the `build_migrations → run_migrations → deploy` CI contract —
-  [ADR-0003](docs/arch/adr/0003-migrations-as-sidecar-job.md) and
-  [docs/arch/persistence.md](docs/arch/persistence.md#миграционный-паттерн).
-
-## Distributed-systems patterns
-
-Patterns (rate limiting, circuit breaker, outbox, singleflight, task leasing,
-token budgets, DLQ, etc.) are adopted only where a service has a concrete
-need for them — never added just for practice. The full map, with the
-specific problem each pattern solves and what's deliberately *not* used, is
-[docs/arch/patterns.md](docs/arch/patterns.md). Check it before reaching for
-a pattern in new code.
-
-Outbox/Kafka specifically: `patterns.md` only says *that* outbox is used and
-why — the actual contract (topic names, event envelope, idempotency-key
-semantics, DLQ naming/retries/retention) is
-[docs/arch/messaging.md](docs/arch/messaging.md). Read both before touching
-any Kafka producer/consumer code, not just `patterns.md`.
+Transport conventions (gRPC/REST, ADR-0002), database conventions
+(Postgres/sqlc/pgx, ADR-0004, migrations-as-sidecar, ADR-0003), and
+distributed-systems patterns (outbox/Kafka/etc.) load on demand as
+path-scoped rules — [`.claude/rules/transport.md`](.claude/rules/transport.md),
+[`.claude/rules/database.md`](.claude/rules/database.md),
+[`.claude/rules/go-patterns.md`](.claude/rules/go-patterns.md) — when
+Claude touches a matching file, instead of loading in every session.
 
 ## Keeping docs in sync
 
@@ -126,8 +91,9 @@ and an advisory `golangci-lint` run after every Go edit, a deny on
 destructive Bash (`rm -rf`, `git push --force`, `git reset --hard`,
 `DROP TABLE`), a deny on editing generated files (`*.pb.go`, `mock_*.go`,
 sqlc output, `.env*`, `go.sum`) that redirects to `task generate`/`buf
-generate`, a `Stop` gate that blocks on a broken `go build ./...`, and the
-docs-sync `Stop` hook described above.
+generate`, a `Stop` gate that blocks if any module fails to build (loops
+every `services/*`/`libs/*` module, not just the root), and the docs-sync
+`Stop` hook described above.
 
 Adding a new one: one script, one responsibility, in `.claude/hooks/`;
 wire it into `.claude/settings.json` under the right event/matcher; add
@@ -270,29 +236,12 @@ Underlying commands per module (if `task` unavailable):
 - Vet: `go vet ./...`
 - Lint: `go tool golangci-lint run ./...`
 
-## Testing stack
-
-- Assertions: `github.com/stretchr/testify` (`assert`/`require`)
-- Integration tests: `github.com/testcontainers/testcontainers-go`, gated behind the `integration` build tag (`//go:build integration`) so `task test` stays fast/Docker-free; run them with `task test:integration`
-- Mocks: `go.uber.org/mock` — generate with `go tool mockgen` (registered as a `tool` dependency in `go.mod`, no global install needed), wire generation through `//go:generate` directives + `task generate`
-- Architecture boundaries: `go-arch-lint` enforces import rules between `internal/` packages and between `services/*`/`libs/*` — wired in as part of M0 once package boundaries exist.
-
-## Linting
-
-`golangci-lint` v2 is a `tool` dependency in `go.mod` (Go 1.24+ tool directive, no separate global install). Config in `.golangci.yml`. Run via `task lint`, not a manually-installed binary — keeps the version pinned and reproducible across machines/CI.
-
-## Docker
-
-- `docker-compose.dist.yml` — tracked template for the local dev stack; `task setup` copies it to `docker-compose.local.yml` (gitignored, machine-specific) on first checkout — adjust after that
-- `docker-compose.local.yml` — your local dev stack, gitignored
-- `docker-compose.prod.yml` — prod stack, tracked
-
-All are empty scaffolds until services exist. Deployment topology (single
-low-spec server, no k8s, DuckDNS domains, resource budget) — [docs/arch/deployment.md](docs/arch/deployment.md).
-
-## Go style
-
-**MUST USE** the `modern-go-guidelines` plugin skill (`use-modern-go`) for all Go code writes/edits/refactors — it encodes [JetBrains: Help AI coding agents write up-to-date Go](https://blog.jetbrains.com/go/2026/08/24/help-ai-coding-agents-write-up-to-date-code-with-modern-golang-skills/): favor current stdlib idioms over outdated patterns an LLM may default to (e.g. `slog` over third-party loggers, `min`/`max` builtins, range-over-func where fitting, current error-handling conventions).
+Testing stack, linting, Go style, and Docker conventions load on demand as
+path-scoped rules — [`.claude/rules/go-testing.md`](.claude/rules/go-testing.md),
+[`.claude/rules/go-linting.md`](.claude/rules/go-linting.md),
+[`.claude/rules/go-style.md`](.claude/rules/go-style.md),
+[`.claude/rules/docker.md`](.claude/rules/docker.md) — instead of loading
+in every session regardless of what's being touched.
 
 ## Agent config: skills and rules per module
 
@@ -310,9 +259,11 @@ automatically on checkout — no separate install step:
   `CLAUDE.md`. Reach for this once a module's `CLAUDE.md` grows unwieldy or
   a rule only applies to a glob within that module.
 
-Neither exists yet in this repo (no module has needed one) — add the first
-one when a module actually needs module-scoped agent guidance beyond what
-its `CLAUDE.md` holds, not preemptively.
+Root-level rules already live in [`.claude/rules/`](.claude/rules/)
+(transport, database, patterns, testing, linting, Go style, Docker — all
+path-scoped). No module has a nested skill or its own `.claude/rules/`
+yet — add the first one when a module actually needs module-scoped agent
+guidance beyond what its `CLAUDE.md` holds, not preemptively.
 
 ## GoLand MCP
 
