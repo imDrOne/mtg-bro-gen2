@@ -9,11 +9,6 @@ tasks:
     cmds:
       - '{{.ROOT_DIR}}/scripts/setup-local.sh {{.CLI_ARGS}}'
 
-  telegram:setup:
-    desc: 'Bootstrap the telegram@claude-plugins-official channel plugin (personal, user-level — see scripts/telegram-bot/README.md).'
-    cmds:
-      - '{{.ROOT_DIR}}/scripts/telegram-bot/setup.sh'
-
   run:
     desc: 'Run a service''s main package. Requires a module.'
     summary: |
