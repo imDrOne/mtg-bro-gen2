@@ -37,7 +37,12 @@ diff_range=""
 base_ref=""
 
 if [[ -n "$pr" ]]; then
-  read -r base_branch head_branch <<< "$(gh pr view "$pr" --json baseRefName,headRefName --jq '[.baseRefName, .headRefName] | @tsv')"
+  pr_refs="$(gh pr view "$pr" --json baseRefName,headRefName --jq '[.baseRefName, .headRefName] | @tsv')"
+  read -r base_branch head_branch <<< "$pr_refs"
+  if [[ -z "$base_branch" || -z "$head_branch" ]]; then
+    echo "resolve-scope.sh: gh pr view returned an incomplete result for PR $pr" >&2
+    exit 1
+  fi
   git fetch origin "$base_branch" "$head_branch"
   diff_range="origin/${base_branch}...origin/${head_branch}"
   base_ref="origin/${base_branch}"
