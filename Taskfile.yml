@@ -1,52 +1,90 @@
 version: '3'
 
 tasks:
-  run:
-    desc: Run main package
+  setup:
+    desc: 'Bootstrap local-only config files from their .dist templates (first-time setup).'
+    summary: |
+      task setup          # write missing docker-compose.local.yml / .mcp.json from their .dist templates
+      task setup -- --force # overwrite existing local files too
     cmds:
-      - go run main.go
+      - '{{.ROOT_DIR}}/scripts/setup-local.sh {{.CLI_ARGS}}'
+
+  run:
+    desc: 'Run a service''s main package. Requires a module.'
+    summary: |
+      task run -- deck          # go run ./services/deck
+      task run -- services/deck # same, full path
+    cmds:
+      - '{{.ROOT_DIR}}/scripts/task/run-module.sh "{{.CLI_ARGS}}"'
 
   build:
-    desc: Build all modules
+    desc: 'Build modules. No args = all modules.'
+    summary: |
+      task build                  # build every module (root + services/* + libs/*)
+      task build -- deck          # build only services/deck
+      task build -- services/deck # same, full path
     cmds:
-      - go build ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go build -o ./bin/ ./..."'
 
   test:
-    desc: Run unit tests
+    desc: 'Run unit tests. No args = all modules.'
+    summary: |
+      task test                  # test every module
+      task test -- deck          # test only services/deck
     cmds:
-      - go test ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go test ./..."'
 
   test:integration:
-    desc: Run integration tests (testcontainers, requires Docker)
+    desc: 'Run integration tests (testcontainers, requires Docker). No args = all modules.'
+    summary: |
+      task test:integration                  # integration-test every module
+      task test:integration -- deck          # only services/deck
     cmds:
-      - go test -tags=integration ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go test -tags=integration ./..."'
 
   vet:
-    desc: Vet code
+    desc: 'Vet code. No args = all modules.'
+    summary: |
+      task vet                  # vet every module
+      task vet -- deck          # only services/deck
     cmds:
-      - go vet ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go vet ./..."'
 
   lint:
-    desc: Run linter
+    desc: 'Run linter. No args = all modules.'
+    summary: |
+      task lint                  # lint every module
+      task lint -- deck          # only services/deck
     cmds:
-      - go tool golangci-lint run ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go tool golangci-lint run ./..."'
 
   lint:fix:
-    desc: Run linter and auto-fix issues
+    desc: 'Run linter and auto-fix issues. No args = all modules.'
+    summary: |
+      task lint:fix                  # fix every module
+      task lint:fix -- deck          # only services/deck
     cmds:
-      - go tool golangci-lint run --fix ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go tool golangci-lint run --fix ./..."'
 
   generate:
-    desc: Run go generate (mocks, etc)
+    desc: 'Run go generate (mocks, etc). No args = all modules.'
+    summary: |
+      task generate                  # generate in every module
+      task generate -- deck          # only services/deck
     cmds:
-      - go generate ./...
+      - '{{.ROOT_DIR}}/scripts/task/run-each.sh "{{.CLI_ARGS}}" "go generate ./..."'
 
   up:
     desc: Start local docker-compose stack
     cmds:
-      - docker compose -f docker-compose.local.yml up -d -p mtg-bro-gen2
+      - docker compose -f docker-compose.local.yml -p mtg-bro-gen2 up -d
 
   down:
     desc: Stop local docker-compose stack
     cmds:
-      - docker compose -f docker-compose.local.yml down
+      - docker compose -f docker-compose.local.yml -p mtg-bro-gen2 down
+
+  changelog:
+    desc: 'Regenerate CHANGELOG.md from Conventional Commits since the last tag (requires Node/npx).'
+    cmds:
+      - npx --yes -p conventional-changelog -p conventional-changelog-conventionalcommits conventional-changelog -p conventionalcommits -i CHANGELOG.md -s
