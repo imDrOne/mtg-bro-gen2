@@ -150,18 +150,37 @@ not whatever they happened to install globally:
 - `gopls-lsp@claude-plugins-official` — Go language server for code
   intelligence/refactoring; fallback for when the [GoLand MCP](#goland-mcp)
   server isn't reachable, better than raw `grep`.
+- `codex@openai-codex` — OpenAI's official Codex bridge; used by the
+  `pr-review` skill (see [Code review](#code-review)) as the preferred
+  review engine when installed and authenticated.
 
 `claude-plugins-official` is Anthropic's built-in marketplace (no extra
 registration needed); non-built-in ones (`plannotator`,
-`goland-claude-marketplace`) are also listed in `extraKnownMarketplaces` in
-the same file — without that, a plugin pinned in `enabledPlugins` fails to
-resolve for anyone who hasn't manually added that marketplace before.
+`goland-claude-marketplace`, `openai-codex`) are also listed in
+`extraKnownMarketplaces` in the same file — without that, a plugin pinned
+in `enabledPlugins` fails to resolve for anyone who hasn't manually added
+that marketplace before.
 
 Adding a required plugin: add it to `enabledPlugins`, and if its
 marketplace isn't `claude-plugins-official`, add the marketplace's
 `source` to `extraKnownMarketplaces` too, in the same change — an
 `enabledPlugins` entry with no matching `extraKnownMarketplaces` entry
 works for you and silently does nothing for everyone else.
+
+## Code review
+
+`/review [--base <ref>] [--pr <n>] [msg...]` (or just asking to review a
+PR/MR/diff/branch — the `pr-review` skill self-triggers) runs a two-pass
+review: a main pass and an always-second adversarial "skeptic" pass that
+actively hunts for problems regardless of what the main pass found.
+
+Both passes prefer Codex (via the `codex@openai-codex` plugin above) when
+it's installed and authenticated, and fall back to a fresh, context-naive
+Claude subagent otherwise — `pr-reviewer-fresh` for the main pass,
+`pr-skeptic` for the skeptic pass (`.claude/agents/`). Findings from both
+passes are merged and reported once via `ReportFindings`, most-severe
+first. See [`.claude/skills/pr-review/SKILL.md`](.claude/skills/pr-review/SKILL.md)
+for the full flow.
 
 ## Commit messages
 
