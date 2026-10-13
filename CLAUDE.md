@@ -176,6 +176,10 @@ or via `gh pr edit` right after if it was created without them:
   unset — don't guess a milestone onto dev-tooling/agent-config work that
   doesn't map to any of them.
 
+`/merge-pr [pr-number-or-branch]` squash-merges a PR with a commit
+message composed from its real commits — never GitHub's default
+"concatenate every commit subject" squash message.
+
 ## Commit messages
 
 Subject line: **[Conventional Commits](https://www.conventionalcommits.org/)**
