@@ -81,6 +81,15 @@ with uncommitted changes and blocks if a touched convention looks
 undocumented or stale. If it blocks, fix the named doc(s) rather than
 arguing with it or re-running to dodge it.
 
+Planning artifacts from `superpowers:brainstorming`/`writing-plans`
+(`docs/superpowers/specs/`, `docs/superpowers/plans/`) are scratch, not
+permanent docs — delete them before finishing a branch
+(`superpowers:finishing-a-development-branch` doesn't do this for you; it
+has no repo-specific awareness). The durable record of what shipped and
+why is the doc(s) this section already requires you to update in the
+same change, plus the commit history/PR description — not a separate
+plan file frozen at a point before implementation diverged from it.
+
 ## Claude Code hooks
 
 Project-level hooks live in `.claude/settings.json` + `.claude/hooks/*.sh`,
