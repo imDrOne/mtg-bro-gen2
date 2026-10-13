@@ -63,12 +63,20 @@ below (scope resolution → Codex probe → main pass → skeptic pass → merge
 ### Command alias — `.claude/commands/review.md`
 
 ```
-/review [--base <ref>] [--pr <n>]
+/review [--base <ref>] [--pr <n>] [msg]
 ```
 
-Thin: "Invoke the `pr-review` skill with these arguments." Exists for a
-deterministic, discoverable manual trigger — the skill's auto-invocation
-covers the "agent just realizes it should review" path.
+`msg` is optional free text after the flags — what to focus on, context
+about the change, known risk areas. Thin: "Invoke the `pr-review` skill
+with these arguments." Exists for a deterministic, discoverable manual
+trigger — the skill's auto-invocation covers the "agent just realizes it
+should review" path.
+
+`msg` threads through both passes (see Flow step 1b): appended verbatim
+to the skeptic pass's focus text always; passed to the main pass only
+when that pass runs as `pr-reviewer-fresh` (Codex's plain `/codex:review`
+equivalent doesn't accept focus text, so `msg` has no effect on the main
+pass when Codex handles it).
 
 ### Subagents
 
@@ -91,14 +99,20 @@ covers the "agent just realizes it should review" path.
    - `--base <ref>` → diff against that ref (`git diff <ref>...HEAD`).
    - `--pr <n>` → `gh pr view <n> --json baseRefName` to get the base ref,
      then same as `--base`.
+   - `msg` (optional trailing free text) → carried forward, not part of
+     scope resolution itself.
 2. **Probe Codex** via the `find` + `setup --json` steps above.
 3. **Main pass.**
    - Codex ready → `node "$CODEX_SCRIPT" review --base <ref> --wait`,
-     capture stdout.
-   - Not ready → spawn `pr-reviewer-fresh` with the resolved scope.
+     capture stdout. `msg` is not passed — the plain review command takes
+     no focus text.
+   - Not ready → spawn `pr-reviewer-fresh` with the resolved scope and
+     `msg` (if given) as extra context about what the change is and what
+     to watch for.
 4. **Skeptic pass — always runs, second, regardless of path taken above.**
-   - Codex ready → `node "$CODEX_SCRIPT" adversarial-review --base <ref> --wait "<skeptic focus text>"`.
-   - Not ready → spawn `pr-skeptic` with the resolved scope.
+   - Codex ready → `node "$CODEX_SCRIPT" adversarial-review --base <ref> --wait "<skeptic focus text>[; <msg>]"`.
+   - Not ready → spawn `pr-skeptic` with the resolved scope and the same
+     combined focus text.
 5. **Merge and report.**
    - Codex output is free-text; the orchestrating agent reads it and
      extracts findings into the `ReportFindings` shape itself.
