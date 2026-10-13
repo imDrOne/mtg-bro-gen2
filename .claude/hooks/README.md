@@ -12,7 +12,7 @@ non-zero would surface as a spurious tool error, not a clean advisory.
 | [`pre-block-destructive-bash.sh`](pre-block-destructive-bash.sh) | `PreToolUse` / `Bash` | **yes** | Denies `rm -rf`, `git push --force`, `git reset --hard`, `DROP TABLE` (case-insensitive) via `permissionDecision: deny`. |
 | [`pre-nudge-task.sh`](pre-nudge-task.sh) | `PreToolUse` / `Bash` | no | Prints a stderr reminder to use `task build`/`test`/`vet`/`up` instead of bare `go build`/`go test`/`docker compose` (skipped for commands containing `cmd/migrate`). |
 | [`pre-block-generated.sh`](pre-block-generated.sh) | `PreToolUse` / `Edit\|Write` | **yes** | Denies edits to generated/managed files (`*.pb.go`, `mock_*.go`, `*/mocks/*`, `*_sqlc.go`, `*/sqlc/*`, `.env*`, `go.sum`) and redirects to `task generate`/`buf generate`. |
-| [`stop-build-gate.sh`](stop-build-gate.sh) | `Stop` | **yes** | Runs `go build ./...` from `$CLAUDE_PROJECT_DIR`; blocks (`decision: block`) if the workspace doesn't build. Checks `stop_hook_active` first to avoid looping. |
+| [`stop-build-gate.sh`](stop-build-gate.sh) | `Stop` | **yes** | Builds every module via `scripts/task/run-each.sh` (a plain `go build ./...` from the root stops at the root module per `go.work` — this loops the same way `task build` does); blocks (`decision: block`) if any module doesn't build. Checks `stop_hook_active` first to avoid looping. |
 
 There's also a `Stop`-event hook of `type: "agent"` configured directly in
 `.claude/settings.json` (no script — it's a harness-run LLM prompt, see
