@@ -13,7 +13,8 @@ context you weren't given.
 The dispatcher's prompt tells you:
 - the repo root path
 - the diff command to run (either `git diff <range>` for a branch/PR
-  comparison, or plain `git diff` for the working tree)
+  comparison, or `git diff HEAD` for the working tree (covers staged +
+  unstaged changes))
 - optionally, a short message describing what the change is about or what
   to watch for
 

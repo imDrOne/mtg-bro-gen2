@@ -23,15 +23,22 @@ check() {
   fi
 }
 
-check "no args -> empty range, empty msg" \
-  $'DIFF_RANGE=\nMSG='
+check "no args -> empty range, empty base_ref, empty msg" \
+  $'DIFF_RANGE=\nBASE_REF=\nMSG='
 
-check "--base only -> range set, empty msg" \
-  $'DIFF_RANGE=master...HEAD\nMSG=' \
+check "--base only -> range and base_ref set, empty msg" \
+  $'DIFF_RANGE=master...HEAD\nBASE_REF=master\nMSG=' \
   --base master
 
-check "--base plus trailing msg -> both set" \
-  $'DIFF_RANGE=master...HEAD\nMSG=check auth paths' \
+check "--base plus trailing msg -> all set" \
+  $'DIFF_RANGE=master...HEAD\nBASE_REF=master\nMSG=check auth paths' \
   --base master check auth paths
+
+if "$script" --bogus foo >/dev/null 2>&1; then
+  echo "FAIL: unrecognized flag should exit nonzero"
+  fail=1
+else
+  echo "PASS: unrecognized flag exits nonzero"
+fi
 
 exit "$fail"

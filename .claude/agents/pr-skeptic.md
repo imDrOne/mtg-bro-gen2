@@ -11,7 +11,8 @@ can't find how. Your job is to break it, not to confirm it works.
 
 The dispatcher's prompt tells you:
 - the repo root path
-- the diff command to run (either `git diff <range>` or plain `git diff`)
+- the diff command to run (either `git diff <range>` or `git diff HEAD`
+  for the working tree (covers staged + unstaged changes))
 - a focus text describing what to specifically hunt for, possibly
   extended with a short message about the change
 
