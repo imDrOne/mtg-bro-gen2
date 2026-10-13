@@ -13,3 +13,8 @@ to "Push and create a Pull Request" against that base branch — don't
 re-present the options menu or ask which option, the user already decided
 by running this command. Still verify tests pass first (the skill's own
 Step 1) before pushing.
+
+When creating the PR, follow `CLAUDE.md`'s "Pull requests" section:
+resolve assignee/labels/milestone first, then pass them to
+`gh pr create -a ... -l ... -m ...` directly rather than creating bare
+and editing after.

@@ -157,6 +157,25 @@ passes are merged and reported once via `ReportFindings`, most-severe
 first. See [`.claude/skills/pr-review/SKILL.md`](.claude/skills/pr-review/SKILL.md)
 for the full flow.
 
+## Pull requests
+
+Every PR gets these set at creation (`gh pr create -a ... -l ... -m ...`)
+or via `gh pr edit` right after if it was created without them:
+
+- **Assignee**: the PR author — `gh pr create -a @me` unless told
+  otherwise.
+- **Labels**: at least one from `gh label list` matching the change's
+  nature (`bug`, `documentation`, `enhancement`, etc. — same
+  overall-impact judgment call as picking a commit type); add more if
+  several genuinely apply.
+- **Milestone**: attach the matching one (`gh api repos/{owner}/{repo}/milestones`,
+  or cross-check `gh issue view <n>` for the issue this PR closes) when
+  one of these holds: the issue this PR closes already has a milestone
+  (inherit it), the user names one directly, or the work maps cleanly to
+  a roadmap milestone (`docs/arch/roadmap.md`, M0–M7). Otherwise leave it
+  unset — don't guess a milestone onto dev-tooling/agent-config work that
+  doesn't map to any of them.
+
 ## Commit messages
 
 Subject line: **[Conventional Commits](https://www.conventionalcommits.org/)**
