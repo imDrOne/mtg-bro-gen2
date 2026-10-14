@@ -75,11 +75,15 @@ convention — update the doc that states it as fact, in the same change.
 `overview.md`/`roadmap.md` follow it, not the other way around (see
 [docs/arch/README.md](docs/arch/README.md)).
 
-This is enforced, not just advisory: a `Stop` hook
-(`.claude/settings.json`) runs a docs-sync check on every turn that ended
-with uncommitted changes and blocks if a touched convention looks
-undocumented or stale. If it blocks, fix the named doc(s) rather than
-arguing with it or re-running to dodge it.
+Nothing enforces this automatically — there's no `Stop` gate for it (there
+used to be; it ran on every turn end, including pure-conversation ones,
+which is why it's gone — see "Claude Code hooks" below). Before calling a
+change done, run `/docs-sync` (the `docs-sync` skill,
+[.claude/skills/docs-sync/SKILL.md](.claude/skills/docs-sync/SKILL.md)):
+it diffs what you touched against the doc that states it as fact and
+updates it. The skill self-triggers when you ask whether docs are current,
+but on a normal implementation turn you're expected to invoke it yourself
+as part of finishing.
 
 Planning artifacts from `superpowers:brainstorming`/`writing-plans`
 (`docs/superpowers/specs/`, `docs/superpowers/plans/`) are scratch, not
@@ -96,19 +100,31 @@ Project-level hooks live in `.claude/settings.json` + `.claude/hooks/*.sh`,
 committed so every contributor/agent gets them on checkout, not just
 whoever configured them locally. Full table of what's wired up and why —
 [.claude/hooks/README.md](.claude/hooks/README.md). Short version: `gofmt`
-and an advisory `golangci-lint` run after every Go edit, a deny on
-destructive Bash (`rm -rf`, `git push --force`, `git reset --hard`,
-`DROP TABLE`), a deny on editing generated files (`*.pb.go`, `mock_*.go`,
-sqlc output, `.env*`, `go.sum`) that redirects to `task generate`/`buf
-generate`, a `Stop` gate that blocks if any module fails to build (loops
-every `services/*`/`libs/*` module, not just the root), and the docs-sync
-`Stop` hook described above.
+runs after every Go edit, a deny on destructive Bash (recursive forced
+`rm`, `git push --force`, `git reset --hard`, `DROP TABLE`), and a deny on
+editing generated/managed files (`*.pb.go`, `mock_*.go`, sqlc output, env
+files, `go.sum`) that redirects to `task generate`/`buf generate`.
+
+Every hook here is a cheap, deterministic, same-turn check: it blocks one
+specific tool call or formats one file, in tens of milliseconds. Hooks are
+deliberately **not** used for build/lint/doc verification — a `Stop` or
+`PostToolUse` hook fires on *every* turn, including conversation-only
+ones, so a per-turn `go build`, `golangci-lint` run, or LLM subagent
+spends wall-clock and tokens on turns that changed nothing, and holds
+block authority over turns that wrote nothing. That verification used to
+live here (a build gate and a docs-sync subagent, both on `Stop`) and was
+removed for exactly this reason. It now lives where it can be scoped to
+actual changes: `task build`/`task test`/`task lint` on demand (see
+[Verifying a change](#verifying-a-change)), GoLand MCP/`gopls-lsp`
+diagnostics while editing, and `/docs-sync` before finishing.
 
 Adding a new one: one script, one responsibility, in `.claude/hooks/`;
 wire it into `.claude/settings.json` under the right event/matcher; add
-its row to `.claude/hooks/README.md`'s table in the same change — an
-undocumented hook is exactly the kind of drift the docs-sync hook above
-exists to catch.
+its row to `.claude/hooks/README.md`'s table in the same change; ship a
+`*.test.sh` next to it if it blocks — these three hooks are the only hard
+enforcement left in the agent config. A new hook must pass the
+cheap/deterministic/same-turn test above, or it belongs in a skill
+instead.
 
 ## Claude Code plugins
 
@@ -274,6 +290,18 @@ path-scoped rules — [`.claude/rules/go-testing.md`](.claude/rules/go-testing.m
 [`.claude/rules/go-style.md`](.claude/rules/go-style.md),
 [`.claude/rules/docker.md`](.claude/rules/docker.md) — instead of loading
 in every session regardless of what's being touched.
+
+## Verifying a change
+
+Nothing blocks you from claiming a change is done on a tree that doesn't
+compile — the old `Stop` build gate is gone on purpose (see "Claude Code
+hooks" below). Before saying a change works: run `task build` (or `task
+build -- <module>` when the change is scoped to one module), `task test`,
+and `task lint` for Go changes, and read the output.
+`superpowers:verification-before-completion` is the process skill for this
+and it applies here. While editing, prefer GoLand MCP's
+`get_file_problems`/`lint_files` (or `gopls-lsp`) over a module-wide `task
+lint` loop — same findings, scoped to the file you're touching.
 
 ## Agent config: skills and rules per module
 
